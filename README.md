@@ -1,4 +1,4 @@
-# ![](ico\48up.png) GF4FB (Google Fonts for FontBase) 
+# ![](https://github.com/nbb1967/gf4fb/blob/main/ico/48.png) GF4FB (Google Fonts for FontBase) 
 
 Converter of Google Fonts database into FontBase font manager format
 
@@ -29,5 +29,5 @@ To update you need to:
 
 Windows utility is created with AutoIt, is free, does not require installation.
 
-------
+# 
 NyBumBum
