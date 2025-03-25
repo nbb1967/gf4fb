@@ -2,10 +2,10 @@
 #AutoIt3Wrapper_Icon=ico\GF4FB.ico
 #AutoIt3Wrapper_Outfile=GF4FB.exe
 #AutoIt3Wrapper_Res_Description=Google Font Base to FontBase Font Base Converter
-#AutoIt3Wrapper_Res_Fileversion=0.9.0.4
+#AutoIt3Wrapper_Res_Fileversion=0.9.1.5
 #AutoIt3Wrapper_Res_Fileversion_AutoIncrement=y
 #AutoIt3Wrapper_Res_ProductName=Google Fonts for FontBase
-#AutoIt3Wrapper_Res_ProductVersion=0.9
+#AutoIt3Wrapper_Res_ProductVersion=0.9.1
 #AutoIt3Wrapper_Res_CompanyName=NyBumBum
 #AutoIt3Wrapper_Res_LegalCopyright=Created by NyBumBum
 #AutoIt3Wrapper_Add_Constants=n
@@ -15,6 +15,13 @@
 #include <MsgBoxConstants.au3>
 #include <Crypt.au3>
 #include <SQLite.au3>
+
+Opt("TrayMenuMode", 1 + 2 + 4)
+Opt("TrayOnEventMode", 1)
+
+TrayCreateItem("Exit")
+TrayItemSetOnEvent(-1, "ExitScript")
+TraySetClick(8)
 
 Local $nCountLog = 0
 Local $sTempLog = ""
@@ -295,7 +302,10 @@ If $nCountLog <> 0 Then
 	MsgBox($MB_ICONWARNING, "Warning", "Some errors occurred while calculating checksums. For more details, see the log file in the program folder.")
 EndIf
 
-_SQLite_Close()
-_SQLite_Shutdown()
+ExitScript()
 
-Exit
+Func ExitScript()
+	_SQLite_Close()
+	_SQLite_Shutdown()
+	Exit
+EndFunc   ;==>ExitScript
