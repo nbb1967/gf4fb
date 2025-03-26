@@ -1,4 +1,4 @@
-# ![](https://github.com/nbb1967/gf4fb/blob/main/ico/48.png) GF4FB (Google Fonts for FontBase) 
+# ![](https://github.com/nbb1967/gf4fb/blob/main/ico/48.png) GF<sub>4</sub>FB (Google Fonts for FontBase) 
 
 Converter of Google Fonts database into FontBase font manager format
 
@@ -12,7 +12,7 @@ Unfortunately, the authors of FontBase font manager rarely update the static dat
 
 To update you need to:
 
-1. Run the GF4FB utility and wait for the processing to finish
+1. Run the GF<sub>4</sub>FB utility and wait for the processing to finish
 
 2. Save the generated `google.json` file
 
