@@ -2,7 +2,7 @@
 #AutoIt3Wrapper_Icon=ico\GF4FB.ico
 #AutoIt3Wrapper_Outfile=GF4FB.exe
 #AutoIt3Wrapper_Res_Description=Google Font Base to FontBase Font Base Converter
-#AutoIt3Wrapper_Res_Fileversion=0.9.1.5
+#AutoIt3Wrapper_Res_Fileversion=0.9.1.6
 #AutoIt3Wrapper_Res_Fileversion_AutoIncrement=y
 #AutoIt3Wrapper_Res_ProductName=Google Fonts for FontBase
 #AutoIt3Wrapper_Res_ProductVersion=0.9.1
@@ -52,7 +52,7 @@ _SQLite_Exec(-1, "CREATE INDEX IF NOT EXISTS index_urls ON google_fonts (url);")
 ;--------------------Download DB---------------------------
 Const $sWebfontsUrl = 'https://www.googleapis.com/webfonts/v1/webfonts?key=YOUR-API-KEY&sort=alpha&capability=VF'
 Local $dInputBinary = InetRead($sWebfontsUrl, 1)
-If @error <> 0 Then
+If @error Then
 	MsgBox($MB_ICONERROR, "Error", "Failed to download Google font database.")
 	Exit
 EndIf
@@ -61,7 +61,7 @@ Local $sInputFullText = BinaryToString($dInputBinary, 4)
 ;---------------------Slicing-----------------------------------
 Const $sRegexSliceFullText = '(\"family\"[^\}]*)'
 Local $asFontsFamiliesArray = StringRegExp($sInputFullText, $sRegexSliceFullText, 3)
-If @error <> 0 Then
+If @error Then
 	MsgBox($MB_ICONERROR, "Error", "Full text slicing failed")
 	Exit
 EndIf
@@ -122,30 +122,30 @@ Local $sFullOut
 ;------------------------Loop Family-----------------------------
 For $element In $asFontsFamiliesArray
 	$asFamily = StringRegExp($element, $sRegexFamily, 1)
-	If @error <> 0 Then
+	If @error Then
 		MsgBox($MB_ICONERROR, "Error", "Font Family not found")
 		Exit
 	EndIf
 	$asLastModified = StringRegExp($element, $sRegexLastModified, 1)
-	If @error <> 0 Then
+	If @error Then
 		$sTempLog &= $sDatatimeLog & " - " & "Last Modified for " & $asFamily[0] & " not found" & @CRLF        ;app works slowly without sql...
 		$nCountLog += 1
 	EndIf
 	$asExtractionVariants = StringRegExp($element, $sRegexExtractionVariants, 3)
-	If @error <> 0 Then
+	If @error Then
 		MsgBox($MB_ICONERROR, "Error", "Variants extraction failed")
 		Exit
 	EndIf
 	;----------------Loop in loop Variants-----------------------------
 	For $variant In $asExtractionVariants
 		$asTempVariant = StringRegExp($variant, $sRegexVariant, 1)
-		If @error <> 0 Then
+		If @error Then
 			MsgBox($MB_ICONERROR, "Error", "Font variant not found")
 			Exit
 		EndIf
 		;-----------------------------------------------------------
 		$asFontUrl = StringRegExp($variant, $sRegexFontUrl, 1)
-		If @error <> 0 Then
+		If @error Then
 			MsgBox($MB_ICONERROR, "Error", "Font Url not found")
 			Exit
 		EndIf
@@ -166,13 +166,13 @@ For $element In $asFontsFamiliesArray
 				$sMD5 = $sMD5FromSQL
 			Else
 				$dData = InetRead($asFontUrl[0], 1)
-				If @error <> 0 Then
+				If @error Then
 					$sTempLog &= $sDatatimeLog & " - " & "Failed to download " & $asFontUrl[0] & @CRLF
 					$nCountLog += 1
 					$sMD5 = $sMD5Zero
 				Else
 					$dMD5 = _Crypt_HashData($dData, $CALG_MD5)
-					If @error <> 0 Then
+					If @error Then
 						$sTempLog &= $sDatatimeLog & " - " & "Failed to calculate hash for " & $asFontUrl[0] & @CRLF
 						$nCountLog += 1
 						$sMD5 = $sMD5Zero
@@ -184,13 +184,13 @@ For $element In $asFontsFamiliesArray
 			EndIf
 		Else
 			$dData = InetRead($asFontUrl[0], 1)
-			If @error <> 0 Then
+			If @error Then
 				$sTempLog &= $sDatatimeLog & " - " & "Failed to download " & $asFontUrl[0] & @CRLF
 				$nCountLog += 1
 				$sMD5 = $sMD5Zero
 			Else
 				$dMD5 = _Crypt_HashData($dData, $CALG_MD5)
-				If @error <> 0 Then
+				If @error Then
 					$sTempLog &= $sDatatimeLog & " - " & "Failed to calculate hash for " & $asFontUrl[0] & @CRLF
 					$nCountLog += 1
 					$sMD5 = $sMD5Zero
@@ -247,7 +247,7 @@ For $element In $asFontsFamiliesArray
 			Case "900italic"
 				$sVariant = "Black Italic"
 		EndSwitch
-		;-------------------------------------------------------------
+		;---------------------Generate google.json-------------------upper half
 		$sfonts = '        "' & StringStripWS($asFamily[0], 8) & '-' & StringStripWS($sVariant, 8) & '": {' & @CRLF
 		$sid = '            "id": "' & StringStripWS($asFamily[0], 8) & '-' & StringStripWS($sVariant, 8) & '",' & @CRLF
 		$sfontFamilyName = '            "fontFamilyName": "' & StringStripWS($asFamily[0], 8) & '",' & @CRLF
@@ -256,7 +256,7 @@ For $element In $asFontsFamiliesArray
 		$spostScriptName = '            "postScriptName": "' & StringStripWS($asFamily[0], 8) & '-' & StringStripWS($sVariant, 8) & '"' & @CRLF
 
 		$sTempFonts &= $sfonts & $sid & $sfontFamilyName & $sfontSubFamily & $sfullFontName & $spostScriptName & '        },' & @CRLF
-		;------------------------------------------------------------
+		;------------------------------------------------------------lower half
 		$spaths = '        "/Providers/Google/' & StringStripWS($asFamily[0], 8) & '-' & StringStripWS($sVariant, 8) & $sExtension & '": {' & @CRLF
 		$schecksum = '            "checksum": "' & $sMD5 & '",' & @CRLF
 		$spath = '            "path": "/Providers/Google/' & StringStripWS($asFamily[0], 8) & '-' & StringStripWS($sVariant, 8) & $sExtension & '",' & @CRLF
@@ -294,7 +294,7 @@ FileWrite($hOutputFile, $sFullOut)
 FileClose($hOutputFile)
 
 ;------------------------------Log------------------------------------
-If $nCountLog <> 0 Then
+If $nCountLog Then
 	Local $sPatchToLogFile = @ScriptDir & "\log.txt"
 	Local $hLogFile = FileOpen($sPatchToLogFile, 257)
 	FileWrite($hLogFile, $sTempLog)
