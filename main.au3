@@ -19,6 +19,8 @@
 Opt("TrayMenuMode", 1 + 2 + 4)
 Opt("TrayOnEventMode", 1)
 
+Global $bSQLOpened = False
+
 TrayCreateItem("Exit")
 TrayItemSetOnEvent(-1, "_ExitScript")
 TraySetClick(8)
@@ -34,7 +36,6 @@ Local $aRow
 Local $bExistInSQL
 Local $sDateFromSQL
 Local $sMD5FromSQL
-Global $bSQLOpened = False
 
 _SQLite_Startup()
 If @error Then
