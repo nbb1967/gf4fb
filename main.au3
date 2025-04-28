@@ -2,10 +2,10 @@
 #AutoIt3Wrapper_Icon=ico\GF4FB.ico
 #AutoIt3Wrapper_Outfile=GF4FB.exe
 #AutoIt3Wrapper_Res_Description=Google Font Base to FontBase Font Base Converter
-#AutoIt3Wrapper_Res_Fileversion=0.9.1.6
+#AutoIt3Wrapper_Res_Fileversion=0.9.2.6
 #AutoIt3Wrapper_Res_Fileversion_AutoIncrement=y
 #AutoIt3Wrapper_Res_ProductName=Google Fonts for FontBase
-#AutoIt3Wrapper_Res_ProductVersion=0.9.1
+#AutoIt3Wrapper_Res_ProductVersion=0.9.2
 #AutoIt3Wrapper_Res_CompanyName=NyBumBum
 #AutoIt3Wrapper_Res_LegalCopyright=Created by NyBumBum
 #AutoIt3Wrapper_Add_Constants=n
@@ -20,53 +20,57 @@ Opt("TrayMenuMode", 1 + 2 + 4)
 Opt("TrayOnEventMode", 1)
 
 TrayCreateItem("Exit")
-TrayItemSetOnEvent(-1, "ExitScript")
+TrayItemSetOnEvent(-1, "_ExitScript")
 TraySetClick(8)
 
 Local $nCountLog = 0
 Local $sTempLog = ""
 Const $sDatatimeLog = @MDAY & "-" & @MON & "-" & @YEAR & " " & @HOUR & ":" & @MIN & ":" & @SEC & "." & @MSEC
+Local $sGoogleFontsAPIKey = ''
 
-;-----------------------SQLite----------------------------
+;--------------------------SQLite----------------------------
 Local $hQuery
 Local $aRow
 Local $bExistInSQL
 Local $sDateFromSQL
 Local $sMD5FromSQL
+Global $bSQLOpened = False
 
 _SQLite_Startup()
 If @error Then
 	$sTempLog &= $sDatatimeLog & " - " & "Failed to load SQLite3.dll" & @CRLF        ;app works slowly without sql...
 	$nCountLog += 1
+Else
+	OnAutoItExitRegister("_SQLite_Shutdowning_On_Exit")
+	Local $hSQLiteDB = _SQLite_Open('md5.db') ;Open or Create
+	If @error Then
+		$sTempLog &= $sDatatimeLog & " - " & "Failed to open a Database" & @CRLF        ;app works slowly without sql...
+		$nCountLog += 1
+	Else
+		$bSQLOpened = True
+		_SQLite_Exec(-1, "CREATE TABLE IF NOT EXISTS google_fonts (id INTEGER PRIMARY KEY, url TEXT NOT NULL UNIQUE, date TEXT NOT NULL, hash TEXT NOT NULL);")
+		_SQLite_Exec(-1, "CREATE INDEX IF NOT EXISTS index_urls ON google_fonts (url);")
+	EndIf
 EndIf
 
-Local $hSQLiteDB = _SQLite_Open('md5.db') ;Open or Create
-If @error Then
-	$sTempLog &= $sDatatimeLog & " - " & "Failed to open a Database" & @CRLF        ;app works slowly without sql...
-	$nCountLog += 1
-EndIf
-
-_SQLite_Exec(-1, "CREATE TABLE IF NOT EXISTS google_fonts (id INTEGER PRIMARY KEY, url TEXT NOT NULL UNIQUE, date TEXT NOT NULL, hash TEXT NOT NULL);")
-_SQLite_Exec(-1, "CREATE INDEX IF NOT EXISTS index_urls ON google_fonts (url);")
-
-;--------------------Download DB---------------------------
-Const $sWebfontsUrl = 'https://www.googleapis.com/webfonts/v1/webfonts?key=YOUR-API-KEY&sort=alpha&capability=VF'
+;------------------------Download DB---------------------------
+Const $sWebfontsUrl = 'https://www.googleapis.com/webfonts/v1/webfonts?key=' & $sGoogleFontsAPIKey & '&sort=alpha&capability=VF'
 Local $dInputBinary = InetRead($sWebfontsUrl, 1)
 If @error Then
 	MsgBox($MB_ICONERROR, "Error", "Failed to download Google font database.")
-	Exit
+	_ExitScript()
 EndIf
 Local $sInputFullText = BinaryToString($dInputBinary, 4)
 
-;---------------------Slicing-----------------------------------
+;--------------------------Slicing------------------------------
 Const $sRegexSliceFullText = '(\"family\"[^\}]*)'
 Local $asFontsFamiliesArray = StringRegExp($sInputFullText, $sRegexSliceFullText, 3)
 If @error Then
 	MsgBox($MB_ICONERROR, "Error", "Full text slicing failed")
-	Exit
+	_ExitScript()
 EndIf
 
-;---------------------Progress-----------------------------------
+;--------------------------Progress-----------------------------
 Const $sRegexHTTPS = '(\"https\:)'
 Local $asArrayHTTPS = StringRegExp($sInputFullText, $sRegexHTTPS, 3)
 Const $sRegexMenu = '(\"menu\")'
@@ -80,7 +84,7 @@ Local $nCount = 0
 Local $sPercentBefore = 0
 Local $sPercentAfter
 
-;-----------------------Parsing------------------------------
+;--------------------------Parsing------------------------------
 Const $sRegexFamily = '(?:\"family\"\:\s\")([^\"]*)'
 Const $sRegexLastModified = '(?:\"lastModified\"\:\s\")([^\"]{1,})'
 Const $sRegexExtractionVariants = '(\"[^\n]*\.[t|o]tf\")'
@@ -124,7 +128,7 @@ For $element In $asFontsFamiliesArray
 	$asFamily = StringRegExp($element, $sRegexFamily, 1)
 	If @error Then
 		MsgBox($MB_ICONERROR, "Error", "Font Family not found")
-		Exit
+		_ExitScript()
 	EndIf
 	$asLastModified = StringRegExp($element, $sRegexLastModified, 1)
 	If @error Then
@@ -134,36 +138,55 @@ For $element In $asFontsFamiliesArray
 	$asExtractionVariants = StringRegExp($element, $sRegexExtractionVariants, 3)
 	If @error Then
 		MsgBox($MB_ICONERROR, "Error", "Variants extraction failed")
-		Exit
+		_ExitScript()
 	EndIf
 	;----------------Loop in loop Variants-----------------------------
 	For $variant In $asExtractionVariants
 		$asTempVariant = StringRegExp($variant, $sRegexVariant, 1)
 		If @error Then
 			MsgBox($MB_ICONERROR, "Error", "Font variant not found")
-			Exit
+			_ExitScript()
 		EndIf
 		;-----------------------------------------------------------
 		$asFontUrl = StringRegExp($variant, $sRegexFontUrl, 1)
 		If @error Then
 			MsgBox($MB_ICONERROR, "Error", "Font Url not found")
-			Exit
+			_ExitScript()
 		EndIf
 
 		;---------------------------SQL and MD5---------------------
-		_SQLite_Query(-1, "SELECT EXISTS (SELECT url FROM google_fonts WHERE url = " & _SQLite_FastEscape($asFontUrl[0]) & ");", $hQuery)
-		While _SQLite_FetchData($hQuery, $aRow) = $SQLITE_OK
-			$bExistInSQL = $aRow[0]
-		WEnd
-
-		If $bExistInSQL = 1 Then
-			_SQLite_Query(-1, "SELECT * FROM google_fonts WHERE url = " & _SQLite_FastEscape($asFontUrl[0]) & ";", $hQuery)
+		If $bSQLOpened Then
+			_SQLite_Query(-1, "SELECT EXISTS (SELECT url FROM google_fonts WHERE url = " & _SQLite_FastEscape($asFontUrl[0]) & ");", $hQuery)
 			While _SQLite_FetchData($hQuery, $aRow) = $SQLITE_OK
-				$sDateFromSQL = $aRow[2]
-				$sMD5FromSQL = $aRow[3] ;just in case
+				$bExistInSQL = $aRow[0]
 			WEnd
-			If $sDateFromSQL == $asLastModified[0] Then
-				$sMD5 = $sMD5FromSQL
+
+			If $bExistInSQL = 1 Then
+				_SQLite_Query(-1, "SELECT * FROM google_fonts WHERE url = " & _SQLite_FastEscape($asFontUrl[0]) & ";", $hQuery)
+				While _SQLite_FetchData($hQuery, $aRow) = $SQLITE_OK
+					$sDateFromSQL = $aRow[2]
+					$sMD5FromSQL = $aRow[3] ;just in case
+				WEnd
+				If $sDateFromSQL == $asLastModified[0] Then
+					$sMD5 = $sMD5FromSQL
+				Else
+					$dData = InetRead($asFontUrl[0], 1)
+					If @error Then
+						$sTempLog &= $sDatatimeLog & " - " & "Failed to download " & $asFontUrl[0] & @CRLF
+						$nCountLog += 1
+						$sMD5 = $sMD5Zero
+					Else
+						$dMD5 = _Crypt_HashData($dData, $CALG_MD5)
+						If @error Then
+							$sTempLog &= $sDatatimeLog & " - " & "Failed to calculate hash for " & $asFontUrl[0] & @CRLF
+							$nCountLog += 1
+							$sMD5 = $sMD5Zero
+						Else
+							$sMD5 = StringLower(StringTrimLeft($dMD5, 2))
+							_SQLite_Exec(-1, "UPDATE google_fonts SET date = " & _SQLite_FastEscape($asLastModified[0]) & ", hash = " & _SQLite_FastEscape($sMD5) & " WHERE url = " & _SQLite_FastEscape($asFontUrl[0]) & ";")
+						EndIf
+					EndIf
+				EndIf
 			Else
 				$dData = InetRead($asFontUrl[0], 1)
 				If @error Then
@@ -178,7 +201,7 @@ For $element In $asFontsFamiliesArray
 						$sMD5 = $sMD5Zero
 					Else
 						$sMD5 = StringLower(StringTrimLeft($dMD5, 2))
-						_SQLite_Exec(-1, "UPDATE google_fonts SET date = " & _SQLite_FastEscape($asLastModified[0]) & ", hash = " & _SQLite_FastEscape($sMD5) & " WHERE url = " & _SQLite_FastEscape($asFontUrl[0]) & ";")
+						_SQLite_Exec(-1, "INSERT INTO google_fonts (url, date, hash) VALUES (" & _SQLite_FastEscape($asFontUrl[0]) & ", " & _SQLite_FastEscape($asLastModified[0]) & ", " & _SQLite_FastEscape($sMD5) & ");")
 					EndIf
 				EndIf
 			EndIf
@@ -196,19 +219,15 @@ For $element In $asFontsFamiliesArray
 					$sMD5 = $sMD5Zero
 				Else
 					$sMD5 = StringLower(StringTrimLeft($dMD5, 2))
-					_SQLite_Exec(-1, "INSERT INTO google_fonts (url, date, hash) VALUES (" & _SQLite_FastEscape($asFontUrl[0]) & ", " & _SQLite_FastEscape($asLastModified[0]) & ", " & _SQLite_FastEscape($sMD5) & ");")
 				EndIf
 			EndIf
 		EndIf
 
 		;------------------------ttf or otf-------------------------
 		$bOTFDetect = StringRegExp($asFontUrl[0], $sRegexOTFDetect)
-		If $bOTFDetect Then
-			$sExtension = ".otf"
-		Else
-			$sExtension = ".ttf"
-		EndIf
-		;-----------------------------------------------------------
+		$sExtension = $bOTFDetect ? ".otf" : ".ttf"
+
+		;---------------------Naming of Variants -------------------
 		Switch $asTempVariant[0]
 			Case "100"
 				$sVariant = "Thin"
@@ -302,10 +321,15 @@ If $nCountLog Then
 	MsgBox($MB_ICONWARNING, "Warning", "Some errors occurred while calculating checksums. For more details, see the log file in the program folder.")
 EndIf
 
-ExitScript()
+_ExitScript()
 
-Func ExitScript()
-	_SQLite_Close()
+;======================================================================
+
+Func _SQLite_Shutdowning_On_Exit()
 	_SQLite_Shutdown()
+EndFunc   ;==>_SQLite_Shutdowning_On_Exit
+
+Func _ExitScript()
+	If $bSQLOpened Then _SQLite_Close()
 	Exit
-EndFunc   ;==>ExitScript
+EndFunc   ;==>_ExitScript
