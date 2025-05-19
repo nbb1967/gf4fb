@@ -319,7 +319,7 @@ If $nCountLog Then
 	Local $hLogFile = FileOpen($sPatchToLogFile, 257)
 	FileWrite($hLogFile, $sTempLog)
 	FileClose($hLogFile)
-	MsgBox($MB_ICONWARNING, "Warning", "Some errors occurred while calculating checksums. For more details, see the log file in the program folder.")
+	MsgBox($MB_ICONWARNING, "Warning", "Some errors occurred while converting the font database. For more details, see the log file in the program folder.")
 EndIf
 
 _ExitScript()
