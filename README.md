@@ -1,3 +1,20 @@
+![OUTDATED](https://i.ibb.co/TqhGxBC5/outdated.png)
+
+This utility was created to solve two problems:
+
+1. Restore the classic names of font variants..
+2. Update the static Google font database more frequently than the authors of FontBase did.
+ 
+In version 2.22.4, the classic font names returned to FontBase.<br>
+In version 2.24.0, the authors created a dynamic update for the Google font database.<br>
+Hallelujah!!!
+
+*2.23.1 is the latest version of FontBase that is compatible with the GF<sub>4</sub>FB utility.*
+
+-------------
+
+
+
 # ![](https://github.com/nbb1967/gf4fb/blob/main/ico/48.png) GF<sub>4</sub>FB (Google Fonts for FontBase) 
 
 Converter of Google Fonts database into FontBase font manager format
