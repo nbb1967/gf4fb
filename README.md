@@ -2,7 +2,7 @@
 
 This utility was created to solve two problems:
 
-1. Restore the classic names of font variants..
+1. Restore the classic names of font variants.
 2. Update the static Google font database more frequently than the authors of FontBase did.
  
 In version 2.22.4, the classic font names returned to FontBase.<br>
